@@ -187,7 +187,10 @@ body {
     background-color: var(--secondary-bg);
     border-top: 1px solid #333;
     flex-shrink: 0;
+    /* Adiciona padding na parte de baixo igual à altura da barra do sistema */
+    padding-bottom: env(safe-area-inset-bottom);
 }
+
 
 .nav-button {
     background: none;
@@ -315,12 +318,15 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    /* Garante que o chat não ultrapasse a altura da tela */
+    overflow: hidden;
 }
 
 #chat-header {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-shrink: 0; /* Impede que o header encolha */
 }
 
 #back-to-contacts-btn {
@@ -347,7 +353,7 @@ body {
 }
 
 #messages-container {
-    flex-grow: 1;
+    flex-grow: 1; /* Ocupa todo o espaço vertical disponível */
     padding: 1rem;
     overflow-y: auto;
     display: flex;
@@ -392,9 +398,11 @@ body {
     display: flex;
     padding: 0.75rem 1rem;
     background-color: var(--tertiary-bg);
-    flex-shrink: 0;
+    flex-shrink: 0; /* Impede que o formulário encolha */
     align-items: center;
     gap: 0.75rem;
+    /* Adiciona padding na parte de baixo para não ficar atrás da barra do sistema ou do teclado */
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
 
 #upload-file-btn {
