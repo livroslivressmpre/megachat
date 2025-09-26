@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MegaChat Moderno</title>
+    <title>MegaChat - Entrar</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
         <div class="spinner"></div>
     </div>
 
-    <div id="auth-container" class="hidden">
+    <div id="auth-container">
         <div class="form-container">
             <form id="login-form">
                 <h2>Login</h2>
@@ -36,82 +36,6 @@
         </div>
     </div>
 
-    <div id="app-container" class="hidden">
-        <main id="page-content">
-            <section id="contacts-page" class="page">
-                <header class="page-header"><h1>Contactos</h1></header>
-                <ul id="main-contacts-list" class="content-list"></ul>
-            </section>
-
-            <section id="chat-page" class="page">
-                <main id="chat-window">
-                    <div id="welcome-screen"><h2>Bem-vindo!</h2><p>Vá à página de contactos para iniciar uma conversa.</p></div>
-                    <div id="chat-area" class="hidden">
-                        <header id="chat-header" class="page-header">
-                            <button id="back-to-contacts-btn" title="Voltar">&lt;</button>
-                            <div class="header-main-content">
-                                <h3 id="chat-with-username" title="Voltar ao chat geral"></h3> 
-                                <div id="subchats-container">
-                                    <div id="subchats-list"></div>
-                                    <button id="add-subchat-btn" title="Criar novo tópico">+</button>
-                                </div>
-                            </div>
-                        </header>
-                        <div id="messages-container"></div>
-                        <form id="message-form">
-                            <button type="button" id="upload-file-btn" title="Anexar ficheiro">📎</button>
-                            <input type="file" id="file-input" class="hidden">
-                            <input type="text" id="message-input" placeholder="Escreva uma mensagem..." autocomplete="off">
-                            <button type="submit" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path></svg></button>
-                        </form>
-                    </div>
-                </main>
-            </section>
-
-            <section id="social-page" class="page">
-                <header class="page-header"><h1>Social</h1></header>
-                <p class="placeholder-text">A página Social está em construção!</p>
-            </section>
-
-            <section id="profile-page" class="page">
-                <header class="page-header"><h1>Perfil</h1></header>
-                <div class="profile-content">
-                    <form id="profile-update-form">
-                        <label for="profile-username">Nome de Utilizador</label>
-                        <input type="text" id="profile-username" required class="form-input">
-                        <button type="submit" class="form-button">Guardar Alterações</button>
-                    </form>
-                    <button id="app-logout-button" class="form-button danger">Terminar Sessão</button>
-                </div>
-            </section>
-        </main>
-
-        <nav id="bottom-nav">
-            <button id="nav-contacts" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.66-3.3-1-4.5-1C5.33 13 1 15.08 1 17.25V20h14v-2.75c0-2.17-4.33-4.25-6.5-4.25zm-7.5-3c1.93 0 3.5-1.57 3.5-3.5S10.93 3 9 3 5.5 4.57 5.5 6.5 7.07 10 9 10zm7.5 1c1.33 0 2.5-.47 3.5-1.25V6.5C20 4.57 18.43 3 16.5 3S13 4.57 13 6.5c0 .54.13 1.04.35 1.5.61.84 1.5 1.5 2.65 1.5zM23 17.25c0-2.17-4.33-4.25-6.5-4.25-.42 0-.83.06-1.24.12.38.44.72.93 1.01 1.47.88.29 1.95.82 2.73 1.41V20H15v-2.75c0-.5-.1-.95-.28-1.38-.85.34-1.73.53-2.72.53-1.2 0-3.07-.34-4.5-1-1.43.66-3.3 1-4.5 1C5.33 13 1 15.08 1 17.25V20h14v-2.75z"/></svg><span>Contactos</span></button>
-            <button id="nav-chat" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2z"/></svg><span>Chat</span></button>
-            <button id="nav-social" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><span>Social</span></button>
-            <button id="nav-profile" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Perfil</span></button>
-        </nav>
-    </div>
-    
-    <div id="subchat-modal" class="hidden">
-        <div id="subchat-modal-content">
-            <h3 id="subchat-modal-title"></h3>
-            <form id="subchat-form">
-                <!-- CORREÇÃO APLICADA: Adicionada a classe "form-input" para estilizar o campo de texto. -->
-                <input type="text" id="subchat-name-input" placeholder="Nome do tópico" required class="form-input">
-                <input type="hidden" id="subchat-id-input">
-                <div class="modal-buttons">
-                    <button type="button" class="form-button secondary" id="cancel-subchat-btn">Cancelar</button>
-                    <button type="submit" class="form-button">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <div id="message-context-menu" class="hidden"><div id="emoji-reactions"><button>👍</button><button>❤️</button><button>😂</button><button>😮</button><button>😢</button><button>🙏</button></div><div class="context-menu-options"><button id="edit-message-btn">Editar</button><button id="delete-message-btn">Apagar</button></div></div>
-    <div id="edit-message-modal" class="hidden"><div id="edit-message-modal-content"><h3>Editar Mensagem</h3><form id="edit-message-form"><textarea id="edit-message-input" required></textarea><div class="modal-buttons"><button type="button" class="form-button secondary" id="cancel-edit-btn">Cancelar</button><button type="submit" class="form-button">Guardar</button></div></form></div></div>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
