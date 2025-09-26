@@ -24,7 +24,8 @@ body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--primary-bg);
     color: var(--primary-text);
-    height: 100vh;
+    /* --- CORREÇÃO APLICADA para problemas de altura em mobile --- */
+    height: calc(var(--vh, 1vh) * 100);
     min-height: -webkit-fill-available;
     overflow: hidden;
 }
@@ -78,6 +79,9 @@ body {
     background-color: var(--secondary-bg);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    /* --- CORREÇÃO APLICADA para garantir que o formulário é clicável --- */
+    position: relative;
+    z-index: 10;
 }
 
 .form-container h2 {
@@ -573,7 +577,6 @@ body {
     background-color: #444;
 }
 
-/* --- CORREÇÃO APLICADA: Adicionados os estilos para os Modals --- */
 #edit-message-modal, #subchat-modal {
     position: fixed;
     top: 0;
