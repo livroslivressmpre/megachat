@@ -16,6 +16,41 @@
     box-sizing: border-box;
 }
 
+/* --- ADIÇÕES PARA GARANTIR A ADAPTAÇÃO AO MOBILE --- */
+
+/* 
+  1. Garante que o layout base nunca exceda a largura da tela
+     e aplica uma quebra de palavra mais agressiva como padrão.
+     Isto previne que URLs longas ou texto sem espaços quebrem o layout.
+*/
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden; /* A regra mais importante para evitar a barra de scroll horizontal */
+    word-break: break-word;
+    -webkit-text-size-adjust: 100%; /* Previne o zoom automático de texto no iOS */
+}
+
+/* 
+  2. Torna todas as imagens e vídeos responsivos por padrão. 
+     Eles nunca serão mais largos que o seu contentor.
+*/
+img, video {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Remove o espaço extra abaixo das imagens */
+}
+
+/* 
+  3. Garante que os contentores de flexbox não permitam que os seus filhos
+     causem overflow facilmente.
+*/
+.page, #app-container {
+    overflow-x: hidden;
+}
+
+/* --- FIM DAS ADIÇÕES --- */
+
 html {
     height: -webkit-fill-available;
 }
@@ -26,7 +61,7 @@ body {
     color: var(--primary-text);
     height: calc(var(--vh, 1vh) * 100);
     min-height: -webkit-fill-available;
-    overflow: hidden;
+    /* A propriedade overflow: hidden foi movida para o bloco de correções acima */
 }
 
 .hidden {
@@ -69,6 +104,8 @@ body {
     align-items: center;
     height: 100%;
     padding: 1rem;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .form-container {
