@@ -2,9 +2,13 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MegaChat - Entrar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MegaChat Moderno</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script>
+        // Define a altura da viewport para corrigir problemas em browsers mobile
         function setVhProperty() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -13,18 +17,689 @@
         window.addEventListener('orientationchange', setVhProperty);
         setVhProperty(); // Executa na primeira vez
     </script>
-    
-    <link rel="stylesheet" href="style.css?v=2">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #121212;
+            --secondary-bg: #1e1e1e;
+            --tertiary-bg: #2d2d2d;
+            --primary-text: #e0e0e0;
+            --secondary-text: #b3b3b3;
+            --accent-color: #00bcd4;
+            --error-color: #ff5252;
+            --sent-message-bg: #0084ff;
+            --received-message-bg: #3e4042;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* --- ADIÇÕES PARA GARANTIR A ADAPTAÇÃO AO MOBILE --- */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+            word-break: break-word;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        img, video {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .page, #app-container {
+            overflow-x: hidden;
+        }
+
+        html {
+            height: -webkit-fill-available;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            height: calc(var(--vh, 1vh) * 100);
+            min-height: -webkit-fill-available;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--tertiary-bg);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 1rem;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+            background-color: var(--secondary-bg);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 10;
+        }
+
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 1rem;
+            background-color: var(--tertiary-bg);
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: var(--primary-text);
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .form-button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form-button:hover {
+            background-color: #0097a7;
+        }
+
+        .form-container p {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--secondary-text);
+        }
+
+        .form-container p a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            text-align: center;
+            margin-top: 1rem;
+            min-height: 20px;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        #page-content {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        .page-header {
+            padding: 1rem 1.5rem;
+            background-color: var(--secondary-bg);
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+            z-index: 5;
+            padding-top: calc(1rem + env(safe-area-inset-top));
+        }
+
+        .page-header h1,
+        .page-header h3 {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+        }
+
+        #bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--secondary-bg);
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            color: var(--secondary-text);
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex-grow: 1;
+            transition: color 0.2s ease;
+        }
+
+        .nav-button:hover {
+            color: var(--primary-text);
+        }
+
+        .nav-button.active {
+            color: var(--accent-color);
+        }
+
+        .nav-button span {
+            font-size: 0.75rem;
+        }
+
+        .content-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .content-list li {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 1px solid #2a2a2a;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .content-list li:hover {
+            background-color: var(--tertiary-bg);
+        }
+
+        .profile-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        #profile-update-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        #profile-update-form label {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+        }
+
+        #profile-update-form .form-button {
+            margin-top: 1rem;
+        }
+
+        .form-button.danger {
+            background-color: #5a2828;
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+        }
+
+        .form-button.danger:hover {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .placeholder-text {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary-text);
+        }
+
+        #chat-page {
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #chat-window {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        #chat-page.chat-view-active #chat-window {
+            transform: translateX(0);
+        }
+
+        #welcome-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            color: var(--secondary-text);
+        }
+
+        #chat-area {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        #back-to-contacts-btn {
+            background: none;
+            border: none;
+            color: var(--primary-text);
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .header-main-content {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        #chat-header h3 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--primary-text);
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        #messages-container {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .message-bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+        }
+
+        .message.received {
+            align-self: flex-start;
+        }
+
+        .message.sent .message-bubble {
+            background-color: var(--sent-message-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received .message-bubble {
+            background-color: var(--received-message-bg);
+            color: var(--primary-text);
+            border-bottom-left-radius: 4px;
+        }
+
+        #message-form {
+            display: flex;
+            padding: 0.75rem 1rem;
+            background-color: var(--tertiary-bg);
+            flex-shrink: 0;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+        }
+
+        #upload-file-btn {
+            background: none;
+            border: none;
+            color: var(--secondary-text);
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0;
+            transition: color 0.2s ease;
+        }
+
+        #upload-file-btn:hover {
+            color: var(--accent-color);
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 12px 18px;
+            background-color: #4a4a4a;
+            border: none;
+            border-radius: 22px;
+            color: var(--primary-text);
+            font-size: 1rem;
+        }
+
+        #message-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        #message-form button[type="submit"] {
+            margin-left: 0;
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        #message-form button[type="submit"]:hover {
+            background-color: #0097a7;
+        }
+
+        #message-form button[type="submit"] svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .message-bubble img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        #subchats-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        #subchats-list {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subchat-pill {
+            background-color: #4a4a4a;
+            color: var(--secondary-text);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .subchat-pill:hover {
+            background-color: #555;
+            color: var(--primary-text);
+        }
+
+        .subchat-pill.active {
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        #add-subchat-btn {
+            background-color: var(--tertiary-bg);
+            color: var(--accent-color);
+            border: 1px dashed var(--accent-color);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 3px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        #message-context-menu {
+            position: absolute;
+            z-index: 1001;
+            background-color: var(--tertiary-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #emoji-reactions {
+            display: flex;
+            padding: 8px;
+            background-color: var(--secondary-bg);
+        }
+
+        #emoji-reactions button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: transform 0.1s ease, background-color 0.2s ease;
+        }
+
+        .context-menu-options button {
+            background: none;
+            border: none;
+            color: var(--primary-text);
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .context-menu-options button:hover,
+        #emoji-reactions button:hover {
+            background-color: var(--primary-bg);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-buttons .form-button {
+            width: auto;
+            padding: 10px 20px;
+        }
+
+        .form-button.secondary {
+            background-color: var(--tertiary-bg);
+            color: var(--primary-text);
+        }
+
+        .form-button.secondary:hover {
+            background-color: #444;
+        }
+
+        #edit-message-modal, #subchat-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1002;
+        }
+
+        #edit-message-modal-content, #subchat-modal-content {
+            background-color: var(--secondary-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        #edit-message-input {
+            width: 100%;
+            height: 100px;
+            resize: vertical;
+            background-color: var(--tertiary-bg);
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: var(--primary-text);
+            font-family: 'Roboto', sans-serif;
+            font-size: 1rem;
+            padding: 10px;
+        }
+
+        .message-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .edited-indicator {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+        }
+
+        .reactions-container {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sent .reactions-container {
+            justify-content: flex-end;
+        }
+
+        .received .reactions-container {
+            justify-content: flex-start;
+        }
+
+        .reaction {
+            background-color: var(--tertiary-bg);
+            border: 1px solid var(--secondary-bg);
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
+    <!-- Indicador de Loading Global -->
     <div id="loading-indicator">
         <div class="spinner"></div>
     </div>
 
+    <!-- Contentor de Autenticação (Login/Registo) -->
     <div id="auth-container">
         <div class="form-container">
             <form id="login-form">
@@ -46,10 +721,567 @@
         </div>
     </div>
 
+    <!-- Contentor Principal da Aplicação -->
+    <div id="app-container" class="hidden">
+        <main id="page-content">
+            <!-- Página de Contactos -->
+            <section id="contacts-page" class="page">
+                <header class="page-header"><h1>Contactos</h1></header>
+                <ul id="main-contacts-list" class="content-list"></ul>
+            </section>
+
+            <!-- Página de Chat -->
+            <section id="chat-page" class="page">
+                <main id="chat-window">
+                    <div id="welcome-screen"><h2>Bem-vindo!</h2><p>Vá à página de contactos para iniciar uma conversa.</p></div>
+                    <div id="chat-area" class="hidden">
+                        <header id="chat-header" class="page-header">
+                            <button id="back-to-contacts-btn" title="Voltar">&lt;</button>
+                            <div class="header-main-content">
+                                <h3 id="chat-with-username" title="Voltar ao chat geral"></h3> 
+                                <div id="subchats-container">
+                                    <div id="subchats-list"></div>
+                                    <button id="add-subchat-btn" title="Criar novo tópico">+</button>
+                                </div>
+                            </div>
+                        </header>
+                        <div id="messages-container"></div>
+                        <form id="message-form">
+                            <button type="button" id="upload-file-btn" title="Anexar ficheiro">📎</button>
+                            <input type="file" id="file-input" class="hidden">
+                            <input type="text" id="message-input" placeholder="Escreva uma mensagem..." autocomplete="off">
+                            <button type="submit" title="Enviar"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path></svg></button>
+                        </form>
+                    </div>
+                </main>
+            </section>
+
+            <!-- Página Social -->
+            <section id="social-page" class="page">
+                <header class="page-header"><h1>Social</h1></header>
+                <p class="placeholder-text">A página Social está em construção!</p>
+            </section>
+
+            <!-- Página de Perfil -->
+            <section id="profile-page" class="page">
+                <header class="page-header"><h1>Perfil</h1></header>
+                <div class="profile-content">
+                    <form id="profile-update-form">
+                        <label for="profile-username">Nome de Utilizador</label>
+                        <input type="text" id="profile-username" required class="form-input">
+                        <button type="submit" class="form-button">Guardar Alterações</button>
+                    </form>
+                    <button id="app-logout-button" class="form-button danger">Terminar Sessão</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Navegação Inferior -->
+        <nav id="bottom-nav">
+            <button id="nav-contacts" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.66-3.3-1-4.5-1C5.33 13 1 15.08 1 17.25V20h14v-2.75c0-2.17-4.33-4.25-6.5-4.25zm-7.5-3c1.93 0 3.5-1.57 3.5-3.5S10.93 3 9 3 5.5 4.57 5.5 6.5 7.07 10 9 10zm7.5 1c1.33 0 2.5-.47 3.5-1.25V6.5C20 4.57 18.43 3 16.5 3S13 4.57 13 6.5c0 .54.13 1.04.35 1.5.61.84 1.5 1.5 2.65 1.5zM23 17.25c0-2.17-4.33-4.25-6.5-4.25-.42 0-.83.06-1.24.12.38.44.72.93 1.01 1.47.88.29 1.95.82 2.73 1.41V20H15v-2.75c0-.5-.1-.95-.28-1.38-.85.34-1.73.53-2.72.53-1.2 0-3.07-.34-4.5-1-1.43.66-3.3 1-4.5 1C5.33 13 1 15.08 1 17.25V20h14v-2.75z"/></svg><span>Contactos</span></button>
+            <button id="nav-chat" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2z"/></svg><span>Chat</span></button>
+            <button id="nav-social" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><span>Social</span></button>
+            <button id="nav-profile" class="nav-button"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg><span>Perfil</span></button>
+        </nav>
+    </div>
+    
+    <!-- Modais e Menus de Contexto -->
+    <div id="subchat-modal" class="hidden">
+        <div id="subchat-modal-content">
+            <h3 id="subchat-modal-title"></h3>
+            <form id="subchat-form">
+                <input type="text" id="subchat-name-input" placeholder="Nome do tópico" required class="form-input">
+                <input type="hidden" id="subchat-id-input">
+                <div class="modal-buttons">
+                    <button type="button" class="form-button secondary" id="cancel-subchat-btn">Cancelar</button>
+                    <button type="submit" class="form-button">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="message-context-menu" class="hidden">
+        <div id="emoji-reactions"><button>👍</button><button>❤️</button><button>😂</button><button>😮</button><button>😢</button><button>🙏</button></div>
+        <div class="context-menu-options"><button id="edit-message-btn">Editar</button><button id="delete-message-btn">Apagar</button></div>
+    </div>
+
+    <div id="edit-message-modal" class="hidden">
+        <div id="edit-message-modal-content">
+            <h3>Editar Mensagem</h3>
+            <form id="edit-message-form">
+                <textarea id="edit-message-input" required></textarea>
+                <div class="modal-buttons">
+                    <button type="button" class="form-button secondary" id="cancel-edit-btn">Cancelar</button>
+                    <button type="submit" class="form-button">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Scripts Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
-    <script src="script.js"></script>
+    
+    <!-- Lógica da Aplicação -->
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBCGd5_a8p1Jt0p3ZUEzjOqtZ8Do5dLJGI",
+            authDomain: "megachat-6b432.firebaseapp.com",
+            projectId: "megachat-6b432",
+            storageBucket: "megachat-6b432.firebasestorage.app",
+            messagingSenderId: "689172817399",
+            appId: "1:689172817399:web:7f5c324ee9b1f4de7efaf2"
+        };
+
+        // Inicialização
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Se o usuário está LOGADO
+                currentUser = user;
+                loadingIndicator.classList.add('hidden');
+                authContainer.classList.add('hidden'); // Esconde autenticação
+                appContainer.classList.remove('hidden'); // Mostra app
+                
+                // Carrega os dados da app
+                initializeEventListeners(); // Garante que os listeners da app estão ativos
+                loadUsersForContactsPage();
+                loadProfile();
+                showPage('contacts-page');
+
+            } else {
+                // Se o usuário está DESLOGADO
+                currentUser = null;
+                loadingIndicator.classList.add('hidden');
+                appContainer.classList.add('hidden'); // Esconde app
+                authContainer.classList.remove('hidden'); // Mostra autenticação
+                
+                initializeEventListeners(); // Garante que os listeners de autenticação estão ativos
+
+                if (unsubscribeMessages) unsubscribeMessages();
+                if (unsubscribeSubchats) unsubscribeSubchats();
+            }
+        });
+
+
+        // Referências DOM
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const pages = document.querySelectorAll('.page');
+        const navButtons = document.querySelectorAll('.nav-button');
+        const mainContactsList = document.getElementById('main-contacts-list');
+        const profileUpdateForm = document.getElementById('profile-update-form');
+        const profileUsernameInput = document.getElementById('profile-username');
+        const appLogoutButton = document.getElementById('app-logout-button');
+        const chatPage = document.getElementById('chat-page');
+        const chatArea = document.getElementById('chat-area');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const chatWithUsername = document.getElementById('chat-with-username');
+        const backToContactsBtn = document.getElementById('back-to-contacts-btn');
+        const messagesContainer = document.getElementById('messages-container');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const uploadFileBtn = document.getElementById('upload-file-btn');
+        const fileInput = document.getElementById('file-input');
+        const subchatsList = document.getElementById('subchats-list');
+        const addSubchatBtn = document.getElementById('add-subchat-btn');
+        const subchatModal = document.getElementById('subchat-modal');
+        const subchatForm = document.getElementById('subchat-form');
+        const subchatNameInput = document.getElementById('subchat-name-input');
+        const subchatIdInput = document.getElementById('subchat-id-input');
+        const cancelSubchatBtn = document.querySelector('#subchat-modal #cancel-subchat-btn');
+        const messageContextMenu = document.getElementById('message-context-menu');
+        const editMessageBtn = document.getElementById('edit-message-btn');
+        const deleteMessageBtn = document.getElementById('delete-message-btn');
+        const emojiReactions = document.getElementById('emoji-reactions');
+        const editMessageModal = document.getElementById('edit-message-modal');
+        const editMessageForm = document.getElementById('edit-message-form');
+        const editMessageInput = document.getElementById('edit-message-input');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const showSignup = document.getElementById('show-signup');
+        const showLogin = document.getElementById('show-login');
+        const authError = document.getElementById('auth-error');
+
+        // Variáveis de Estado
+        let currentUser = null;
+        let currentChatPartner = null;
+        let currentSubchatId = null;
+        let unsubscribeMessages = null;
+        let unsubscribeSubchats = null;
+        let longPressTimer;
+        let activeMessageId = null;
+        let listenersInitialized = false;
+
+        function showPage(pageId) {
+            pages.forEach(p => p.classList.remove('active'));
+            navButtons.forEach(b => b.classList.remove('active'));
+            document.getElementById(pageId)?.classList.add('active');
+            document.getElementById(`nav-${pageId.replace('-page', '')}`)?.classList.add('active');
+            
+            if (pageId !== 'chat-page' && chatPage) {
+                chatPage.classList.remove('chat-view-active');
+            }
+        }
+
+        function initializeEventListeners() {
+            if (listenersInitialized) return;
+
+            // ---- Listeners para a PÁGINA DE AUTENTICAÇÃO (index.html) ----
+            showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
+            showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+
+            signupForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const username = signupForm.querySelector('#signup-username').value;
+                const email = signupForm.querySelector('#signup-email').value;
+                const password = signupForm.querySelector('#signup-password').value;
+                
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(cred => {
+                        return db.collection('users').doc(cred.user.uid).set({ username, email });
+                    })
+                    .catch(err => {
+                        authError.textContent = err.message;
+                    });
+            });
+
+            loginForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const email = loginForm.querySelector('#login-email').value;
+                const password = loginForm.querySelector('#login-password').value;
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(err => { authError.textContent = err.message; });
+            });
+            
+            // ---- Listeners para a APLICAÇÃO PRINCIPAL (web.html) ----
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pageId = button.id.replace('nav-', '') + '-page';
+                    showPage(pageId);
+                });
+            });
+
+            profileUpdateForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const newUsername = profileUsernameInput.value.trim();
+                if (newUsername) {
+                    db.collection('users').doc(currentUser.uid).update({ username: newUsername })
+                    .then(() => alert('Perfil atualizado!'));
+                }
+            });
+
+            appLogoutButton.addEventListener('click', () => auth.signOut());
+            addSubchatBtn.addEventListener('click', () => { openSubchatModal(); });
+            backToContactsBtn.addEventListener('click', () => {
+                chatPage.classList.remove('chat-view-active');
+                showPage('contacts-page');
+            });
+
+            messageForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const content = messageInput.value.trim();
+                if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
+            });
+
+            uploadFileBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
+
+            subchatsList.addEventListener('click', (event) => {
+                const pill = event.target.closest('.subchat-pill');
+                if (pill) {
+                    const subchatId = pill.dataset.id === 'null' ? null : pill.dataset.id;
+                    selectSubchat(subchatId);
+                }
+            });
+
+            subchatsList.addEventListener('dblclick', (event) => {
+                const pill = event.target.closest('.subchat-pill');
+                if (pill && pill.dataset.id !== 'null') {
+                    const subchatId = pill.dataset.id;
+                    const subchatName = pill.textContent;
+                    openSubchatModal(subchatId, subchatName);
+                }
+            });
+
+            window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
+            
+            deleteMessageBtn.addEventListener('click', () => {
+                if (activeMessageId) {
+                    const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                    const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                    db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).delete();
+                }
+                messageContextMenu.classList.add('hidden');
+            });
+            
+            emojiReactions.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', () => {
+                    if (activeMessageId) {
+                        const emoji = button.textContent;
+                        const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                        const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                        const messageRef = db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId);
+                        db.runTransaction(async t => {
+                            const doc = await t.get(messageRef);
+                            if (!doc.exists) return;
+                            const reactions = doc.data().reactions || {};
+                            const uids = reactions[emoji] || [];
+                            if (uids.includes(currentUser.uid)) {
+                                t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
+                            } else {
+                                t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
+                            }
+                        });
+                    }
+                    messageContextMenu.classList.add('hidden');
+                });
+            });
+
+            cancelEditBtn.addEventListener('click', closeEditModal);
+            editMessageForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const newContent = editMessageInput.value.trim();
+                if (newContent && activeMessageId) {
+                    const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                    const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                    db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).update({
+                        conteudo: newContent,
+                        editado: true,
+                        hora_editado: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                closeEditModal();
+            });
+            
+            cancelSubchatBtn.addEventListener('click', closeSubchatModal);
+            subchatForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const name = subchatNameInput.value.trim();
+                if (!name) return;
+                const subchatId = subchatIdInput.value;
+                const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                const chatDocRef = db.collection('chats').doc(chatId);
+                if (subchatId) {
+                    chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
+                } else {
+                    const newId = Date.now().toString();
+                    chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
+                }
+            });
+
+            listenersInitialized = true;
+        }
+
+        function loadProfile() {
+            db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+                if (doc.exists) profileUsernameInput.value = doc.data().username;
+            });
+        }
+
+        function loadUsersForContactsPage() {
+            db.collection('users').onSnapshot(snapshot => {
+                mainContactsList.innerHTML = '';
+                snapshot.forEach(doc => {
+                    if (doc.id === currentUser.uid) return;
+                    const user = doc.data();
+                    const li = document.createElement('li');
+                    li.textContent = user.username;
+                    li.addEventListener('click', () => {
+                        startChat(doc.id, user.username);
+                        showPage('chat-page');
+                    });
+                    mainContactsList.appendChild(li);
+                });
+            });
+        }
+
+        function startChat(uid, username) {
+            currentChatPartner = { uid, username };
+            currentSubchatId = null;
+            welcomeScreen.classList.add('hidden');
+            chatArea.classList.remove('hidden');
+            chatWithUsername.textContent = username;
+            chatWithUsername.onclick = () => selectSubchat(null);
+            chatPage.classList.add('chat-view-active');
+            loadSubchats();
+            loadMessages();
+        }
+
+        function getChatId(uid1, uid2) { return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`; }
+
+        function loadMessages() {
+            if (unsubscribeMessages) unsubscribeMessages();
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+            const messagesCollection = db.collection('chats').doc(chatId).collection(collectionName).orderBy('hora_enviado');
+            
+            unsubscribeMessages = messagesCollection.onSnapshot(snapshot => {
+                messagesContainer.innerHTML = '';
+                snapshot.forEach(doc => displayMessage(doc.data(), doc.id));
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        }
+
+        function displayMessage(message, messageId) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('message', message.user_que_enviou === currentUser.uid ? 'sent' : 'received');
+            messageWrapper.dataset.id = messageId;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+
+            const tipo = message.tipo || 'texto';
+            switch (tipo) {
+                case 'imagem': bubble.innerHTML = `<img src="${message.conteudo}" alt="${message.nomeFicheiro || 'Imagem'}">`; break;
+                case 'ficheiro': bubble.innerHTML = `Ficheiro: <a href="${message.conteudo}" target="_blank" rel="noopener noreferrer">${message.nomeFicheiro}</a>`; break;
+                default:
+                    const messageContent = document.createElement('div');
+                    messageContent.className = 'message-content';
+                    messageContent.textContent = message.conteudo;
+                    if (message.editado) {
+                        const editedIndicator = document.createElement('span');
+                        editedIndicator.className = 'edited-indicator';
+                        editedIndicator.textContent = ' (editado)';
+                        messageContent.appendChild(editedIndicator);
+                    }
+                    bubble.appendChild(messageContent);
+                    break;
+            }
+            messageWrapper.appendChild(bubble);
+
+            if (message.reactions) {
+                const reactionsContainer = document.createElement('div');
+                reactionsContainer.className = 'reactions-container';
+                Object.entries(message.reactions).forEach(([emoji, uids]) => {
+                    if (uids.length > 0) {
+                        const reactionDiv = document.createElement('div');
+                        reactionDiv.className = 'reaction';
+                        reactionDiv.textContent = `${emoji} ${uids.length}`;
+                        reactionsContainer.appendChild(reactionDiv);
+                    }
+                });
+                messageWrapper.appendChild(reactionsContainer);
+            }
+            const openMenu = (event) => { openContextMenu(event, messageId, message.conteudo, message.user_que_enviou, tipo); };
+            bubble.addEventListener('dblclick', openMenu);
+            bubble.addEventListener('contextmenu', openMenu);
+            bubble.addEventListener('touchstart', e => { longPressTimer = setTimeout(() => openMenu(e), 500); });
+            bubble.addEventListener('touchend', () => clearTimeout(longPressTimer));
+            bubble.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+            messagesContainer.appendChild(messageWrapper);
+        }
+
+        function sendMessage(messageData) {
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+            const finalMessage = { ...messageData, user_que_enviou: currentUser.uid, user_que_recebeu: currentChatPartner.uid, hora_enviado: firebase.firestore.FieldValue.serverTimestamp() };
+            db.collection('chats').doc(chatId).collection(collectionName).add(finalMessage);
+        }
+
+        function sendFileMessage(file) {
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const filePath = `chat_files/${chatId}/${Date.now()}_${file.name}`;
+            const uploadTask = storage.ref(filePath).put(file);
+            uploadTask.on('state_changed', null, err => console.error(err), () => {
+                uploadTask.snapshot.ref.getDownloadURL().then(url => {
+                    sendMessage({ tipo: file.type.startsWith('image/') ? 'imagem' : 'ficheiro', conteudo: url, nomeFicheiro: file.name });
+                });
+            });
+        }
+
+        function selectSubchat(subchatId) {
+            currentSubchatId = subchatId;
+            document.querySelectorAll('.subchat-pill').forEach(pill => {
+                pill.classList.toggle('active', pill.dataset.id === String(subchatId));
+            });
+            loadMessages();
+        }
+
+        function loadSubchats() {
+            if (unsubscribeSubchats) unsubscribeSubchats();
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const chatDocRef = db.collection('chats').doc(chatId);
+
+            unsubscribeSubchats = chatDocRef.onSnapshot(doc => {
+                subchatsList.innerHTML = '';
+                
+                const generalPill = document.createElement('div');
+                generalPill.className = 'subchat-pill';
+                generalPill.textContent = 'Geral';
+                generalPill.dataset.id = 'null';
+                subchatsList.appendChild(generalPill);
+
+                if (doc.exists && doc.data().subchats) {
+                    const subchats = doc.data().subchats;
+                    for (const id in subchats) {
+                        const subchat = subchats[id];
+                        const pill = document.createElement('div');
+                        pill.className = 'subchat-pill';
+                        pill.textContent = subchat.name;
+                        pill.dataset.id = id;
+                        subchatsList.appendChild(pill);
+                    }
+                }
+                
+                const activeId = currentSubchatId === null ? 'null' : String(currentSubchatId);
+                document.querySelector(`.subchat-pill[data-id="${activeId}"]`)?.classList.add('active');
+            });
+        }
+
+        function openContextMenu(event, messageId, content, senderUID, type) {
+            event.preventDefault();
+            activeMessageId = messageId;
+            messageContextMenu.classList.remove('hidden');
+            const menuWidth = messageContextMenu.offsetWidth;
+            const menuHeight = messageContextMenu.offsetHeight;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            let x = event.pageX || event.touches[0].pageX;
+            let y = event.pageY || event.touches[0].pageY;
+            if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 10;
+            if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 10;
+            messageContextMenu.style.top = `${y}px`;
+            messageContextMenu.style.left = `${x}px`;
+            
+            const ownerOptions = document.querySelector('.context-menu-options');
+            if (senderUID === currentUser.uid) {
+                ownerOptions.style.display = 'flex';
+                editMessageBtn.style.display = type === 'texto' ? 'block' : 'none';
+                editMessageBtn.onclick = () => openEditModal(content);
+            } else {
+                ownerOptions.style.display = 'none';
+            }
+        }
+
+        function openEditModal(content) {
+            editMessageModal.classList.remove('hidden');
+            editMessageInput.value = content;
+            editMessageInput.focus();
+            messageContextMenu.classList.add('hidden');
+        }
+
+        function closeEditModal() { editMessageModal.classList.add('hidden'); }
+
+        function openSubchatModal(id = null, name = '') {
+            subchatModal.classList.remove('hidden');
+            subchatIdInput.value = id;
+            subchatNameInput.value = name;
+            document.getElementById('subchat-modal-title').textContent = id ? 'Editar Tópico' : 'Criar Tópico';
+        }
+
+        function closeSubchatModal() { subchatModal.classList.add('hidden'); }
+
+    </script>
 </body>
 </html>
