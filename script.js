@@ -14,7 +14,45 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+// Esta é a função principal que controla o acesso
+auth.onAuthStateChanged(user => {
+    const path = window.location.pathname;
+    const isAuthPage = path.endsWith('/') || path.endsWith('index.html');
+
+    if (user) {
+        // Se o usuário está LOGADO
+        currentUser = user;
+        if (isAuthPage) {
+            // e está na página de login, redireciona para a app
+            window.location.href = 'web.html';
+        } else {
+            // se já está na página da app, carrega os dados
+            loadingIndicator.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            loadUsersForContactsPage();
+            loadProfile();
+            showPage('contacts-page');
+        }
+    } else {
+        // Se o usuário está DESLOGADO
+        currentUser = null;
+        if (isAuthPage) {
+            // e está na página de login, mostra o formulário
+            loadingIndicator.classList.add('hidden');
+            authContainer.classList.remove('hidden');
+        } else {
+            // se está em qualquer outra página (protegida), redireciona para o login
+            window.location.href = 'index.html';
+        }
+        if (unsubscribeMessages) unsubscribeMessages();
+        if (unsubscribeSubchats) unsubscribeSubchats();
+    }
+});
+
+
 // Referências DOM
+// É importante obter as referências depois da lógica principal para garantir que a página certa foi carregada
 const loadingIndicator = document.getElementById('loading-indicator');
 const authContainer = document.getElementById('auth-container');
 const appContainer = document.getElementById('app-container');
@@ -65,197 +103,174 @@ let longPressTimer;
 let activeMessageId = null;
 let listenersInitialized = false;
 
-// --- LÓGICA DE NAVEGAÇÃO ---
+// --- FUNÇÃO PARA MOSTRAR PÁGINA (APENAS PARA web.html) ---
 function showPage(pageId) {
     pages.forEach(p => p.classList.remove('active'));
     navButtons.forEach(b => b.classList.remove('active'));
     document.getElementById(pageId)?.classList.add('active');
     document.getElementById(`nav-${pageId.replace('-page', '')}`)?.classList.add('active');
     
-    if (pageId !== 'chat-page') {
+    if (pageId !== 'chat-page' && chatPage) {
         chatPage.classList.remove('chat-view-active');
     }
 }
-
-// --- LÓGICA DE AUTENTICAÇÃO E PERFIL ---
-auth.onAuthStateChanged(user => {
-    loadingIndicator.classList.add('hidden'); 
-    if (user) {
-        currentUser = user;
-        authContainer.classList.add('hidden');
-        appContainer.classList.remove('hidden');
-        loadUsersForContactsPage();
-        loadProfile();
-        showPage('contacts-page');
-    } else {
-        currentUser = null;
-        appContainer.classList.add('hidden');
-        authContainer.classList.remove('hidden');
-        if (unsubscribeMessages) unsubscribeMessages();
-        if (unsubscribeSubchats) unsubscribeSubchats();
-    }
-});
 
 // --- INICIALIZAÇÃO DOS OUVINTES DE EVENTOS ---
 function initializeEventListeners() {
     if (listenersInitialized) return;
+    console.log("Inicializando os ouvintes de eventos...");
 
-    console.log("Inicializando os ouvintes de eventos da aplicação...");
+    // ---- Listeners para a PÁGINA DE AUTENTICAÇÃO (index.html) ----
+    if (authContainer) {
+        showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
+        showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
 
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const pageId = button.id.replace('nav-', '') + '-page';
-            showPage(pageId);
+        signupForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const username = signupForm.querySelector('#signup-username').value;
+            const email = signupForm.querySelector('#signup-email').value;
+            const password = signupForm.querySelector('#signup-password').value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
+                .catch(err => { authError.textContent = err.message; });
         });
-    });
 
-    showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
-    showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = loginForm.querySelector('#login-email').value;
+            const password = loginForm.querySelector('#login-password').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => { authError.textContent = err.message; });
+        });
+    }
 
-    signupForm.addEventListener('submit', e => {
-        console.log("DEBUG: Formulário de SIGNUP submetido!");
-        e.preventDefault();
-        const username = signupForm.querySelector('#signup-username').value;
-        const email = signupForm.querySelector('#signup-email').value;
-        const password = signupForm.querySelector('#signup-password').value;
-        console.log(`DEBUG: Tentando criar utilizador ${username} com o email ${email}`);
-        auth.createUserWithEmailAndPassword(email, password)
-            .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
-            .catch(err => {
-                console.error("DEBUG: Erro no signup:", err);
-                authError.textContent = err.message;
+    // ---- Listeners para a APLICAÇÃO PRINCIPAL (web.html) ----
+    if (appContainer) {
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const pageId = button.id.replace('nav-', '') + '-page';
+                showPage(pageId);
             });
-    });
+        });
 
-    loginForm.addEventListener('submit', e => {
-        console.log("DEBUG: Formulário de LOGIN submetido!");
-        e.preventDefault();
-        const email = loginForm.querySelector('#login-email').value;
-        const password = loginForm.querySelector('#login-password').value;
-        console.log(`DEBUG: Tentando fazer login com o email ${email}`);
-        auth.signInWithEmailAndPassword(email, password)
-            .catch(err => {
-                console.error("DEBUG: Erro no login:", err);
-                authError.textContent = err.message;
-            });
-    });
+        profileUpdateForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const newUsername = profileUsernameInput.value.trim();
+            if (newUsername) {
+                db.collection('users').doc(currentUser.uid).update({ username: newUsername })
+                  .then(() => alert('Perfil atualizado!'));
+            }
+        });
 
-    profileUpdateForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const newUsername = profileUsernameInput.value.trim();
-        if (newUsername) {
-            db.collection('users').doc(currentUser.uid).update({ username: newUsername })
-              .then(() => alert('Perfil atualizado!'));
-        }
-    });
+        appLogoutButton.addEventListener('click', () => auth.signOut());
+        addSubchatBtn.addEventListener('click', () => { openSubchatModal(); });
+        backToContactsBtn.addEventListener('click', () => {
+            chatPage.classList.remove('chat-view-active');
+            showPage('contacts-page');
+        });
 
-    appLogoutButton.addEventListener('click', () => auth.signOut());
-    addSubchatBtn.addEventListener('click', () => { openSubchatModal(); });
-    backToContactsBtn.addEventListener('click', () => {
-        chatPage.classList.remove('chat-view-active');
-        showPage('contacts-page');
-    });
+        messageForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const content = messageInput.value.trim();
+            if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
+        });
 
-    messageForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const content = messageInput.value.trim();
-        if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
-    });
+        uploadFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
 
-    uploadFileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
+        subchatsList.addEventListener('click', (event) => {
+            const pill = event.target.closest('.subchat-pill');
+            if (pill) {
+                const subchatId = pill.dataset.id === 'null' ? null : pill.dataset.id;
+                selectSubchat(subchatId);
+            }
+        });
 
-    subchatsList.addEventListener('click', (event) => {
-        const pill = event.target.closest('.subchat-pill');
-        if (pill) {
-            const subchatId = pill.dataset.id === 'null' ? null : pill.dataset.id;
-            selectSubchat(subchatId);
-        }
-    });
+        subchatsList.addEventListener('dblclick', (event) => {
+            const pill = event.target.closest('.subchat-pill');
+            if (pill && pill.dataset.id !== 'null') {
+                const subchatId = pill.dataset.id;
+                const subchatName = pill.textContent;
+                openSubchatModal(subchatId, subchatName);
+            }
+        });
 
-    subchatsList.addEventListener('dblclick', (event) => {
-        const pill = event.target.closest('.subchat-pill');
-        if (pill && pill.dataset.id !== 'null') {
-            const subchatId = pill.dataset.id;
-            const subchatName = pill.textContent;
-            openSubchatModal(subchatId, subchatName);
-        }
-    });
-
-    window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
-    
-    deleteMessageBtn.addEventListener('click', () => {
-        if (activeMessageId) {
-            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-            db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).delete();
-        }
-        messageContextMenu.classList.add('hidden');
-    });
-    
-    emojiReactions.querySelectorAll('button').forEach(button => {
-        button.addEventListener('click', () => {
+        window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
+        
+        deleteMessageBtn.addEventListener('click', () => {
             if (activeMessageId) {
-                const emoji = button.textContent;
                 const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
                 const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-                const messageRef = db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId);
-                db.runTransaction(async t => {
-                    const doc = await t.get(messageRef);
-                    if (!doc.exists) return;
-                    const reactions = doc.data().reactions || {};
-                    const uids = reactions[emoji] || [];
-                    if (uids.includes(currentUser.uid)) {
-                        t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
-                    } else {
-                        t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
-                    }
-                });
+                db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).delete();
             }
             messageContextMenu.classList.add('hidden');
         });
-    });
-
-    cancelEditBtn.addEventListener('click', closeEditModal);
-    editMessageForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const newContent = editMessageInput.value.trim();
-        if (newContent && activeMessageId) {
-            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-            db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).update({
-                conteudo: newContent,
-                editado: true,
-                hora_editado: firebase.firestore.FieldValue.serverTimestamp()
+        
+        emojiReactions.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (activeMessageId) {
+                    const emoji = button.textContent;
+                    const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                    const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                    const messageRef = db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId);
+                    db.runTransaction(async t => {
+                        const doc = await t.get(messageRef);
+                        if (!doc.exists) return;
+                        const reactions = doc.data().reactions || {};
+                        const uids = reactions[emoji] || [];
+                        if (uids.includes(currentUser.uid)) {
+                            t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
+                        } else {
+                            t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
+                        }
+                    });
+                }
+                messageContextMenu.classList.add('hidden');
             });
-        }
-        closeEditModal();
-    });
-    
-    cancelSubchatBtn.addEventListener('click', closeSubchatModal);
-    subchatForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const name = subchatNameInput.value.trim();
-        if (!name) return;
-        const subchatId = subchatIdInput.value;
-        const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-        const chatDocRef = db.collection('chats').doc(chatId);
-        if (subchatId) {
-            chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
-        } else {
-            const newId = Date.now().toString();
-            chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
-        }
-    });
+        });
+
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        editMessageForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const newContent = editMessageInput.value.trim();
+            if (newContent && activeMessageId) {
+                const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).update({
+                    conteudo: newContent,
+                    editado: true,
+                    hora_editado: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            closeEditModal();
+        });
+        
+        cancelSubchatBtn.addEventListener('click', closeSubchatModal);
+        subchatForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const name = subchatNameInput.value.trim();
+            if (!name) return;
+            const subchatId = subchatIdInput.value;
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const chatDocRef = db.collection('chats').doc(chatId);
+            if (subchatId) {
+                chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
+            } else {
+                const newId = Date.now().toString();
+                chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
+            }
+        });
+    }
 
     listenersInitialized = true;
 }
 
-// ----> CORRECTION: Initialize all event listeners once the script loads.
+// Inicializa os event listeners assim que o script carrega
 initializeEventListeners();
 
+// O resto do código permanece igual... (loadProfile, loadUsersForContactsPage, etc.)
+// As funções abaixo só serão chamadas a partir dos event listeners de web.html, então não há problema.
 
-// ... (The rest of the file remains exactly the same)
 function loadProfile() {
     db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
         if (doc.exists) profileUsernameInput.value = doc.data().username;
