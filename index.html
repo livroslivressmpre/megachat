@@ -1086,9 +1086,45 @@
             listenersInitialized = true;
         }
 
-        function loadProfile() {
+     function loadProfile() {
+            // Log 1: Verifica se a função foi chamada e se currentUser está definido.
+            console.log("loadProfile: Função chamada.");
+
+            if (!currentUser || !currentUser.uid) {
+                console.error("loadProfile: ERRO CRÍTICO - currentUser ou currentUser.uid não está definido no momento da chamada.");
+                return; // Interrompe a função se o usuário não estiver definido
+            }
+            
+            console.log(`loadProfile: Tentando carregar perfil para o UID: ${currentUser.uid}`);
+
+            // Acede à coleção 'users' e seleciona o documento do usuário atual
             db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
-                if (doc.exists) profileUsernameInput.value = doc.data().username;
+                // Log 2: Confirma que o listener onSnapshot foi ativado (recebeu uma resposta do Firebase)
+                console.log("loadProfile: onSnapshot ativado. Analisando o documento recebido...");
+
+                // Log 3: Verifica se o documento do usuário existe
+                if (doc.exists) {
+                    console.log("loadProfile: Documento encontrado!", doc);
+                    
+                    // Log 4: Mostra os dados contidos no documento
+                    const userData = doc.data();
+                    console.log("loadProfile: Dados do documento:", userData);
+                    
+                    // Log 5: Verifica se o campo 'username' existe nos dados
+                    if (userData.username) {
+                        console.log(`loadProfile: Username encontrado: "${userData.username}". Atualizando o campo de input.`);
+                        profileUsernameInput.value = userData.username;
+                    } else {
+                        console.warn("loadProfile: AVISO - O documento existe, mas não contém o campo 'username'.");
+                        profileUsernameInput.placeholder = "Nome de usuário não definido";
+                    }
+                } else {
+                    // Log 6: Informa que o documento do usuário não foi encontrado no Firestore
+                    console.error(`loadProfile: ERRO - Documento para o UID ${currentUser.uid} não foi encontrado na coleção 'users'.`);
+                }
+            }, error => {
+                // Log 7: Captura e exibe qualquer erro que ocorra ao tentar buscar os dados
+                console.error("loadProfile: ERRO ao tentar buscar o documento:", error);
             });
         }
 
