@@ -125,15 +125,29 @@ function initializeEventListeners() {
         showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
         showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
 
-        signupForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const username = signupForm.querySelector('#signup-username').value;
-            const email = signupForm.querySelector('#signup-email').value;
-            const password = signupForm.querySelector('#signup-password').value;
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
-                .catch(err => { authError.textContent = err.message; });
+     signupForm.addEventListener('submit', e => {
+    e.preventDefault();
+    console.log("Formulário de registo submetido!"); // LOG 1
+
+    const username = signupForm.querySelector('#signup-username').value;
+    const email = signupForm.querySelector('#signup-email').value;
+    const password = signupForm.querySelector('#signup-password').value;
+    
+    console.log("A tentar criar utilizador com:", email); // LOG 2
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(cred => {
+            console.log("Utilizador criado no Auth com sucesso! UID:", cred.user.uid); // LOG 3
+            return db.collection('users').doc(cred.user.uid).set({ username, email });
+        })
+        .then(() => {
+            console.log("Documento criado no Firestore com sucesso!"); // LOG 4
+        })
+        .catch(err => {
+            console.error("Ocorreu um erro no processo de registo:", err); // LOG DE ERRO
+            authError.textContent = err.message;
         });
+});
 
         loginForm.addEventListener('submit', e => {
             e.preventDefault();
