@@ -941,20 +941,27 @@
             showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
             showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
 
-            signupForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const username = signupForm.querySelector('#signup-username').value;
-                const email = signupForm.querySelector('#signup-email').value;
-                const password = signupForm.querySelector('#signup-password').value;
-                
-                auth.createUserWithEmailAndPassword(email, password)
-                    .then(cred => {
-                        return db.collection('users').doc(cred.user.uid).set({ username, email });
-                    })
-                    .catch(err => {
-                        authError.textContent = err.message;
-                    });
-            });
+      signupForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const username = signupForm.querySelector('#signup-username').value;
+            const email = signupForm.querySelector('#signup-email').value;
+            const password = signupForm.querySelector('#signup-password').value;
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(cred => {
+                    console.log('Usuário criado na Autenticação com UID:', cred.user.uid);
+                    console.log('Tentando criar documento na coleção "users"...');
+                    // Tenta criar o documento do usuário no Firestore
+                    return db.collection('users').doc(cred.user.uid).set({ username, email });
+                })
+                .then(() => {
+                    console.log('Documento do usuário criado com sucesso no Firestore!');
+                })
+                .catch(err => {
+                    console.error('ERRO durante o processo de registo:', err);
+                    authError.textContent = err.message;
+                });
+        });
 
             loginForm.addEventListener('submit', e => {
                 e.preventDefault();
