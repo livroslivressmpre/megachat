@@ -113,21 +113,34 @@ function initializeEventListeners() {
     showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
     showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
 
+    // LOG DE DIAGNÓSTICO PARA SIGNUP
     signupForm.addEventListener('submit', e => {
+        console.log("DEBUG: Formulário de SIGNUP submetido!");
         e.preventDefault();
         const username = signupForm.querySelector('#signup-username').value;
         const email = signupForm.querySelector('#signup-email').value;
         const password = signupForm.querySelector('#signup-password').value;
+        console.log(`DEBUG: Tentando criar utilizador ${username} com o email ${email}`);
         auth.createUserWithEmailAndPassword(email, password)
             .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
-            .catch(err => authError.textContent = err.message);
+            .catch(err => {
+                console.error("DEBUG: Erro no signup:", err);
+                authError.textContent = err.message;
+            });
     });
 
+    // LOG DE DIAGNÓSTICO PARA LOGIN
     loginForm.addEventListener('submit', e => {
+        console.log("DEBUG: Formulário de LOGIN submetido!");
         e.preventDefault();
         const email = loginForm.querySelector('#login-email').value;
         const password = loginForm.querySelector('#login-password').value;
-        auth.signInWithEmailAndPassword(email, password).catch(err => authError.textContent = err.message);
+        console.log(`DEBUG: Tentando fazer login com o email ${email}`);
+        auth.signInWithEmailAndPassword(email, password)
+            .catch(err => {
+                console.error("DEBUG: Erro no login:", err);
+                authError.textContent = err.message;
+            });
     });
 
     profileUpdateForm.addEventListener('submit', e => {
@@ -140,11 +153,7 @@ function initializeEventListeners() {
     });
 
     appLogoutButton.addEventListener('click', () => auth.signOut());
-
-    addSubchatBtn.addEventListener('click', () => {
-        openSubchatModal(); 
-    });
-
+    addSubchatBtn.addEventListener('click', () => { openSubchatModal(); });
     backToContactsBtn.addEventListener('click', () => {
         chatPage.classList.remove('chat-view-active');
         showPage('contacts-page');
@@ -211,7 +220,6 @@ function initializeEventListeners() {
     });
 
     cancelEditBtn.addEventListener('click', closeEditModal);
-
     editMessageForm.addEventListener('submit', e => {
         e.preventDefault();
         const newContent = editMessageInput.value.trim();
@@ -228,8 +236,6 @@ function initializeEventListeners() {
     });
     
     cancelSubchatBtn.addEventListener('click', closeSubchatModal);
-
-    // CORREÇÃO APLICADA: Esta função já lida com criar e editar.
     subchatForm.addEventListener('submit', e => {
         e.preventDefault();
         const name = subchatNameInput.value.trim();
@@ -237,10 +243,9 @@ function initializeEventListeners() {
         const subchatId = subchatIdInput.value;
         const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
         const chatDocRef = db.collection('chats').doc(chatId);
-        
-        if (subchatId) { // Se existe um ID, atualiza o nome
+        if (subchatId) {
             chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
-        } else { // Se não existe um ID, cria um novo tópico
+        } else {
             const newId = Date.now().toString();
             chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
         }
@@ -249,7 +254,7 @@ function initializeEventListeners() {
     listenersInitialized = true;
 }
 
-
+// ... (o resto do ficheiro a partir daqui pode permanecer exatamente igual)
 function loadProfile() {
     db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
         if (doc.exists) profileUsernameInput.value = doc.data().username;
@@ -440,12 +445,11 @@ function openEditModal(content) {
 
 function closeEditModal() { editMessageModal.classList.add('hidden'); }
 
-// CORREÇÃO APLICADA: Esta função já preenche o nome para edição.
 function openSubchatModal(id = null, name = '') {
     if (subchatModal) {
         subchatModal.classList.remove('hidden');
         subchatIdInput.value = id;
-        subchatNameInput.value = name; // Preenche o nome do tópico na caixa de texto
+        subchatNameInput.value = name;
         document.getElementById('subchat-modal-title').textContent = id ? 'Editar Tópico' : 'Criar Tópico';
     } else {
         console.error('ERRO: O elemento com id "subchat-modal" não foi encontrado no HTML!');
