@@ -573,7 +573,8 @@ body {
     background-color: #444;
 }
 
-#edit-message-modal {
+/* --- CORREÇÃO APLICADA: Adicionados os estilos para os Modals --- */
+#edit-message-modal, #subchat-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -586,7 +587,7 @@ body {
     z-index: 1002;
 }
 
-#edit-message-modal-content {
+#edit-message-modal-content, #subchat-modal-content {
     background-color: var(--secondary-bg);
     padding: 2rem;
     border-radius: 10px;
