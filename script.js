@@ -15,6 +15,7 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 
 // Referências DOM
+const loadingIndicator = document.getElementById('loading-indicator');
 const authContainer = document.getElementById('auth-container');
 const appContainer = document.getElementById('app-container');
 const pages = document.querySelectorAll('.page');
@@ -85,6 +86,9 @@ navButtons.forEach(button => {
 
 // --- LÓGICA DE AUTENTICAÇÃO E PERFIL ---
 auth.onAuthStateChanged(user => {
+    // A primeira coisa que fazemos é esconder o ecrã de loading
+    loadingIndicator.classList.add('hidden'); 
+
     if (user) {
         currentUser = user;
         authContainer.classList.add('hidden');
@@ -228,8 +232,9 @@ function displayMessage(message, messageId) {
         });
         messageWrapper.appendChild(reactionsContainer);
     }
-    const openMenu = (event) => { event.preventDefault(); openContextMenu(event, messageId, message.conteudo, message.user_que_enviou, tipo); };
+    const openMenu = (event) => { openContextMenu(event, messageId, message.conteudo, message.user_que_enviou, tipo); };
     bubble.addEventListener('dblclick', openMenu);
+    bubble.addEventListener('contextmenu', openMenu); // Adicionado para clique direito no desktop
     bubble.addEventListener('touchstart', e => { longPressTimer = setTimeout(() => openMenu(e), 500); });
     bubble.addEventListener('touchend', () => clearTimeout(longPressTimer));
     bubble.addEventListener('touchmove', () => clearTimeout(longPressTimer));
@@ -304,12 +309,43 @@ function loadSubchats() {
 }
 
 function openContextMenu(event, messageId, content, senderUID, type) {
+    // Prevenir o menu de contexto padrão do browser (ex: ao clicar com o botão direito)
+    event.preventDefault();
+    
     activeMessageId = messageId;
+    
+    // Tornar o menu visível para que possamos medir as suas dimensões
     messageContextMenu.classList.remove('hidden');
-    const x = event.pageX || event.touches[0].pageX;
-    const y = event.pageY || event.touches[0].pageY;
+
+    // Obter as dimensões do menu e da janela
+    const menuWidth = messageContextMenu.offsetWidth;
+    const menuHeight = messageContextMenu.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    // Obter a posição do clique/toque
+    let x = event.pageX || event.touches[0].pageX;
+    let y = event.pageY || event.touches[0].pageY;
+
+    // --- Lógica de Ajuste de Posição ---
+
+    // Se o menu ultrapassar a margem direita, ajusta a posição X
+    if (x + menuWidth > windowWidth) {
+        // Posiciona o menu à esquerda do cursor ou encostado à margem direita
+        x = windowWidth - menuWidth - 10; // 10px de margem
+    }
+
+    // Se o menu ultrapassar a margem inferior, ajusta a posição Y
+    if (y + menuHeight > windowHeight) {
+        // Posiciona o menu acima do cursor ou encostado à margem inferior
+        y = windowHeight - menuHeight - 10; // 10px de margem
+    }
+    
+    // Aplicar as posições calculadas
     messageContextMenu.style.top = `${y}px`;
     messageContextMenu.style.left = `${x}px`;
+    
+    // O resto da lógica da função permanece igual
     const ownerOptions = document.querySelector('.context-menu-options');
     if (senderUID === currentUser.uid) {
         ownerOptions.style.display = 'flex';
@@ -319,6 +355,7 @@ function openContextMenu(event, messageId, content, senderUID, type) {
         ownerOptions.style.display = 'none';
     }
 }
+
 window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
 
 deleteMessageBtn.addEventListener('click', () => {
