@@ -265,6 +265,13 @@ function initializeEventListeners() {
     listenersInitialized = true;
 }
 
+
+
+
+
+
+
+
 // Inicializa os event listeners assim que o script carrega
 initializeEventListeners();
 
