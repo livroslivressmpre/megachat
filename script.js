@@ -63,6 +63,7 @@ let unsubscribeMessages = null;
 let unsubscribeSubchats = null;
 let longPressTimer;
 let activeMessageId = null;
+let listenersInitialized = false;
 
 // --- LÓGICA DE NAVEGAÇÃO ---
 function showPage(pageId) {
@@ -71,30 +72,21 @@ function showPage(pageId) {
     document.getElementById(pageId)?.classList.add('active');
     document.getElementById(`nav-${pageId.replace('-page', '')}`)?.classList.add('active');
     
-    // Esconde a janela de chat se não estivermos na página de chat
     if (pageId !== 'chat-page') {
         chatPage.classList.remove('chat-view-active');
     }
 }
 
-navButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const pageId = button.id.replace('nav-', '') + '-page';
-        showPage(pageId);
-    });
-});
-
 // --- LÓGICA DE AUTENTICAÇÃO E PERFIL ---
 auth.onAuthStateChanged(user => {
-    // A primeira coisa que fazemos é esconder o ecrã de loading
     loadingIndicator.classList.add('hidden'); 
-
     if (user) {
         currentUser = user;
         authContainer.classList.add('hidden');
         appContainer.classList.remove('hidden');
         loadUsersForContactsPage();
         loadProfile();
+        initializeEventListeners();
         showPage('contacts-page');
     } else {
         currentUser = null;
@@ -105,25 +97,158 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
-showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+// --- INICIALIZAÇÃO DOS OUVINTES DE EVENTOS ---
+function initializeEventListeners() {
+    if (listenersInitialized) return;
 
-signupForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const username = signupForm.querySelector('#signup-username').value;
-    const email = signupForm.querySelector('#signup-email').value;
-    const password = signupForm.querySelector('#signup-password').value;
-    auth.createUserWithEmailAndPassword(email, password)
-        .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
-        .catch(err => authError.textContent = err.message);
-});
+    console.log("Inicializando os ouvintes de eventos da aplicação...");
 
-loginForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const email = loginForm.querySelector('#login-email').value;
-    const password = loginForm.querySelector('#login-password').value;
-    auth.signInWithEmailAndPassword(email, password).catch(err => authError.textContent = err.message);
-});
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const pageId = button.id.replace('nav-', '') + '-page';
+            showPage(pageId);
+        });
+    });
+
+    showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
+    showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
+
+    signupForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const username = signupForm.querySelector('#signup-username').value;
+        const email = signupForm.querySelector('#signup-email').value;
+        const password = signupForm.querySelector('#signup-password').value;
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(cred => db.collection('users').doc(cred.user.uid).set({ username, email }))
+            .catch(err => authError.textContent = err.message);
+    });
+
+    loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const email = loginForm.querySelector('#login-email').value;
+        const password = loginForm.querySelector('#login-password').value;
+        auth.signInWithEmailAndPassword(email, password).catch(err => authError.textContent = err.message);
+    });
+
+    profileUpdateForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const newUsername = profileUsernameInput.value.trim();
+        if (newUsername) {
+            db.collection('users').doc(currentUser.uid).update({ username: newUsername })
+              .then(() => alert('Perfil atualizado!'));
+        }
+    });
+
+    appLogoutButton.addEventListener('click', () => auth.signOut());
+
+    addSubchatBtn.addEventListener('click', () => {
+        openSubchatModal(); 
+    });
+
+    backToContactsBtn.addEventListener('click', () => {
+        chatPage.classList.remove('chat-view-active');
+        showPage('contacts-page');
+    });
+
+    messageForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const content = messageInput.value.trim();
+        if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
+    });
+
+    uploadFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
+
+    subchatsList.addEventListener('click', (event) => {
+        const pill = event.target.closest('.subchat-pill');
+        if (pill) {
+            const subchatId = pill.dataset.id === 'null' ? null : pill.dataset.id;
+            selectSubchat(subchatId);
+        }
+    });
+
+    subchatsList.addEventListener('dblclick', (event) => {
+        const pill = event.target.closest('.subchat-pill');
+        if (pill && pill.dataset.id !== 'null') {
+            const subchatId = pill.dataset.id;
+            const subchatName = pill.textContent;
+            openSubchatModal(subchatId, subchatName);
+        }
+    });
+
+    window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
+    
+    deleteMessageBtn.addEventListener('click', () => {
+        if (activeMessageId) {
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+            db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).delete();
+        }
+        messageContextMenu.classList.add('hidden');
+    });
+    
+    emojiReactions.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', () => {
+            if (activeMessageId) {
+                const emoji = button.textContent;
+                const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+                const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+                const messageRef = db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId);
+                db.runTransaction(async t => {
+                    const doc = await t.get(messageRef);
+                    if (!doc.exists) return;
+                    const reactions = doc.data().reactions || {};
+                    const uids = reactions[emoji] || [];
+                    if (uids.includes(currentUser.uid)) {
+                        t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
+                    } else {
+                        t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
+                    }
+                });
+            }
+            messageContextMenu.classList.add('hidden');
+        });
+    });
+
+    cancelEditBtn.addEventListener('click', closeEditModal);
+
+    editMessageForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const newContent = editMessageInput.value.trim();
+        if (newContent && activeMessageId) {
+            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
+            db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).update({
+                conteudo: newContent,
+                editado: true,
+                hora_editado: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        closeEditModal();
+    });
+    
+    cancelSubchatBtn.addEventListener('click', closeSubchatModal);
+
+    // CORREÇÃO APLICADA: Esta função já lida com criar e editar.
+    subchatForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const name = subchatNameInput.value.trim();
+        if (!name) return;
+        const subchatId = subchatIdInput.value;
+        const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
+        const chatDocRef = db.collection('chats').doc(chatId);
+        
+        if (subchatId) { // Se existe um ID, atualiza o nome
+            chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
+        } else { // Se não existe um ID, cria um novo tópico
+            const newId = Date.now().toString();
+            chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
+        }
+    });
+
+    listenersInitialized = true;
+}
+
 
 function loadProfile() {
     db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
@@ -131,18 +256,6 @@ function loadProfile() {
     });
 }
 
-profileUpdateForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const newUsername = profileUsernameInput.value.trim();
-    if (newUsername) {
-        db.collection('users').doc(currentUser.uid).update({ username: newUsername })
-          .then(() => alert('Perfil atualizado!'));
-    }
-});
-
-appLogoutButton.addEventListener('click', () => auth.signOut());
-
-// --- LÓGICA DE CONTACTOS ---
 function loadUsersForContactsPage() {
     db.collection('users').onSnapshot(snapshot => {
         mainContactsList.innerHTML = '';
@@ -160,7 +273,6 @@ function loadUsersForContactsPage() {
     });
 }
 
-// --- LÓGICA COMPLETA DO CHAT ---
 function startChat(uid, username) {
     currentChatPartner = { uid, username };
     currentSubchatId = null;
@@ -173,11 +285,6 @@ function startChat(uid, username) {
     loadMessages();
 }
 
-backToContactsBtn.addEventListener('click', () => {
-    chatPage.classList.remove('chat-view-active');
-    showPage('contacts-page');
-});
-
 function getChatId(uid1, uid2) { return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`; }
 
 function loadMessages() {
@@ -189,6 +296,7 @@ function loadMessages() {
     unsubscribeMessages = messagesCollection.onSnapshot(snapshot => {
         messagesContainer.innerHTML = '';
         snapshot.forEach(doc => displayMessage(doc.data(), doc.id));
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     });
 }
 
@@ -234,12 +342,11 @@ function displayMessage(message, messageId) {
     }
     const openMenu = (event) => { openContextMenu(event, messageId, message.conteudo, message.user_que_enviou, tipo); };
     bubble.addEventListener('dblclick', openMenu);
-    bubble.addEventListener('contextmenu', openMenu); // Adicionado para clique direito no desktop
+    bubble.addEventListener('contextmenu', openMenu);
     bubble.addEventListener('touchstart', e => { longPressTimer = setTimeout(() => openMenu(e), 500); });
     bubble.addEventListener('touchend', () => clearTimeout(longPressTimer));
     bubble.addEventListener('touchmove', () => clearTimeout(longPressTimer));
     messagesContainer.appendChild(messageWrapper);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
 function sendMessage(messageData) {
@@ -248,9 +355,6 @@ function sendMessage(messageData) {
     const finalMessage = { ...messageData, user_que_enviou: currentUser.uid, user_que_recebeu: currentChatPartner.uid, hora_enviado: firebase.firestore.FieldValue.serverTimestamp() };
     db.collection('chats').doc(chatId).collection(collectionName).add(finalMessage);
 }
-
-uploadFileBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
 
 function sendFileMessage(file) {
     const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
@@ -263,13 +367,6 @@ function sendFileMessage(file) {
     });
 }
 
-messageForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const content = messageInput.value.trim();
-    if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
-});
-
-// --- LÓGICA DE SUB-CHATS E INTERAÇÕES ---
 function selectSubchat(subchatId) {
     currentSubchatId = subchatId;
     document.querySelectorAll('.subchat-pill').forEach(pill => {
@@ -282,14 +379,16 @@ function loadSubchats() {
     if (unsubscribeSubchats) unsubscribeSubchats();
     const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
     const chatDocRef = db.collection('chats').doc(chatId);
+
     unsubscribeSubchats = chatDocRef.onSnapshot(doc => {
         subchatsList.innerHTML = '';
+        
         const generalPill = document.createElement('div');
         generalPill.className = 'subchat-pill';
         generalPill.textContent = 'Geral';
         generalPill.dataset.id = 'null';
-        generalPill.onclick = () => selectSubchat(null);
         subchatsList.appendChild(generalPill);
+
         if (doc.exists && doc.data().subchats) {
             const subchats = doc.data().subchats;
             for (const id in subchats) {
@@ -298,54 +397,30 @@ function loadSubchats() {
                 pill.className = 'subchat-pill';
                 pill.textContent = subchat.name;
                 pill.dataset.id = id;
-                pill.onclick = () => selectSubchat(id);
-                pill.addEventListener('dblclick', () => openSubchatModal(id, subchat.name));
                 subchatsList.appendChild(pill);
             }
         }
+        
         const activeId = currentSubchatId === null ? 'null' : String(currentSubchatId);
         document.querySelector(`.subchat-pill[data-id="${activeId}"]`)?.classList.add('active');
     });
 }
 
 function openContextMenu(event, messageId, content, senderUID, type) {
-    // Prevenir o menu de contexto padrão do browser (ex: ao clicar com o botão direito)
     event.preventDefault();
-    
     activeMessageId = messageId;
-    
-    // Tornar o menu visível para que possamos medir as suas dimensões
     messageContextMenu.classList.remove('hidden');
-
-    // Obter as dimensões do menu e da janela
     const menuWidth = messageContextMenu.offsetWidth;
     const menuHeight = messageContextMenu.offsetHeight;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-
-    // Obter a posição do clique/toque
     let x = event.pageX || event.touches[0].pageX;
     let y = event.pageY || event.touches[0].pageY;
-
-    // --- Lógica de Ajuste de Posição ---
-
-    // Se o menu ultrapassar a margem direita, ajusta a posição X
-    if (x + menuWidth > windowWidth) {
-        // Posiciona o menu à esquerda do cursor ou encostado à margem direita
-        x = windowWidth - menuWidth - 10; // 10px de margem
-    }
-
-    // Se o menu ultrapassar a margem inferior, ajusta a posição Y
-    if (y + menuHeight > windowHeight) {
-        // Posiciona o menu acima do cursor ou encostado à margem inferior
-        y = windowHeight - menuHeight - 10; // 10px de margem
-    }
-    
-    // Aplicar as posições calculadas
+    if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 10;
+    if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 10;
     messageContextMenu.style.top = `${y}px`;
     messageContextMenu.style.left = `${x}px`;
     
-    // O resto da lógica da função permanece igual
     const ownerOptions = document.querySelector('.context-menu-options');
     if (senderUID === currentUser.uid) {
         ownerOptions.style.display = 'flex';
@@ -356,84 +431,25 @@ function openContextMenu(event, messageId, content, senderUID, type) {
     }
 }
 
-window.addEventListener('click', e => { if (!e.target.closest('.message-bubble') && !e.target.closest('#message-context-menu')) { messageContextMenu.classList.add('hidden'); } });
-
-deleteMessageBtn.addEventListener('click', () => {
-    if (activeMessageId) {
-        const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-        const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-        db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).delete();
-    }
-    messageContextMenu.classList.add('hidden');
-});
-
-emojiReactions.querySelectorAll('button').forEach(button => {
-    button.addEventListener('click', () => {
-        if (activeMessageId) {
-            const emoji = button.textContent;
-            const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-            const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-            const messageRef = db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId);
-            db.runTransaction(async t => {
-                const doc = await t.get(messageRef);
-                if (!doc.exists) return;
-                const reactions = doc.data().reactions || {};
-                const uids = reactions[emoji] || [];
-                if (uids.includes(currentUser.uid)) {
-                    t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
-                } else {
-                    t.update(messageRef, { [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
-                }
-            });
-        }
-        messageContextMenu.classList.add('hidden');
-    });
-});
-
 function openEditModal(content) {
     editMessageModal.classList.remove('hidden');
     editMessageInput.value = content;
     editMessageInput.focus();
     messageContextMenu.classList.add('hidden');
 }
+
 function closeEditModal() { editMessageModal.classList.add('hidden'); }
-cancelEditBtn.addEventListener('click', closeEditModal);
 
-editMessageForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const newContent = editMessageInput.value.trim();
-    if (newContent && activeMessageId) {
-        const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-        const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-        db.collection('chats').doc(chatId).collection(collectionName).doc(activeMessageId).update({
-            conteudo: newContent,
-            editado: true,
-            hora_editado: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
-    closeEditModal();
-});
-
+// CORREÇÃO APLICADA: Esta função já preenche o nome para edição.
 function openSubchatModal(id = null, name = '') {
-    subchatModal.classList.remove('hidden');
-    subchatIdInput.value = id;
-    subchatNameInput.value = name;
-    document.getElementById('subchat-modal-title').textContent = id ? 'Editar Tópico' : 'Criar Tópico';
-}
-function closeSubchatModal() { subchatModal.classList.add('hidden'); }
-cancelSubchatBtn.addEventListener('click', closeSubchatModal);
-
-subchatForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const name = subchatNameInput.value.trim();
-    if (!name) return;
-    const subchatId = subchatIdInput.value;
-    const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
-    const chatDocRef = db.collection('chats').doc(chatId);
-    if (subchatId) {
-        chatDocRef.update({ [`subchats.${subchatId}.name`]: name }).then(closeSubchatModal);
+    if (subchatModal) {
+        subchatModal.classList.remove('hidden');
+        subchatIdInput.value = id;
+        subchatNameInput.value = name; // Preenche o nome do tópico na caixa de texto
+        document.getElementById('subchat-modal-title').textContent = id ? 'Editar Tópico' : 'Criar Tópico';
     } else {
-        const newId = Date.now().toString();
-        chatDocRef.set({ subchats: { [newId]: { name: name } } }, { merge: true }).then(closeSubchatModal);
+        console.error('ERRO: O elemento com id "subchat-modal" não foi encontrado no HTML!');
     }
-});
+}
+
+function closeSubchatModal() { subchatModal.classList.add('hidden'); }
