@@ -86,7 +86,6 @@ auth.onAuthStateChanged(user => {
         appContainer.classList.remove('hidden');
         loadUsersForContactsPage();
         loadProfile();
-        initializeEventListeners();
         showPage('contacts-page');
     } else {
         currentUser = null;
@@ -113,7 +112,6 @@ function initializeEventListeners() {
     showSignup.addEventListener('click', (e) => { e.preventDefault(); loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); });
     showLogin.addEventListener('click', (e) => { e.preventDefault(); signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
 
-    // LOG DE DIAGNÓSTICO PARA SIGNUP
     signupForm.addEventListener('submit', e => {
         console.log("DEBUG: Formulário de SIGNUP submetido!");
         e.preventDefault();
@@ -129,7 +127,6 @@ function initializeEventListeners() {
             });
     });
 
-    // LOG DE DIAGNÓSTICO PARA LOGIN
     loginForm.addEventListener('submit', e => {
         console.log("DEBUG: Formulário de LOGIN submetido!");
         e.preventDefault();
@@ -254,7 +251,11 @@ function initializeEventListeners() {
     listenersInitialized = true;
 }
 
-// ... (o resto do ficheiro a partir daqui pode permanecer exatamente igual)
+// ----> CORRECTION: Initialize all event listeners once the script loads.
+initializeEventListeners();
+
+
+// ... (The rest of the file remains exactly the same)
 function loadProfile() {
     db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
         if (doc.exists) profileUsernameInput.value = doc.data().username;
