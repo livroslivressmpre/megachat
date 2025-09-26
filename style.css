@@ -164,12 +164,15 @@ body {
     display: flex;
 }
 
+/* --- CORREÇÃO FINAL PARA O CABEÇALHO EM MOBILE --- */
 .page-header {
     padding: 1rem 1.5rem;
     background-color: var(--secondary-bg);
     border-bottom: 1px solid #333;
     flex-shrink: 0;
     z-index: 5;
+    /* Adiciona espaço no topo para não ficar debaixo da status bar do iOS */
+    padding-top: calc(1rem + env(safe-area-inset-top));
 }
 
 .page-header h1,
@@ -318,14 +321,11 @@ body {
 }
 
 #chat-header {
+    /* Este elemento tem a classe .page-header, então a correção do padding-top já é aplicada aqui */
     display: flex;
     align-items: center;
     gap: 1rem;
-    /* --- NOVA CORREÇÃO APLICADA --- */
-    position: sticky;
-    top: 0;
-    background-color: var(--secondary-bg);
-    z-index: 10;
+    flex-shrink: 0; /* Garante que o cabeçalho nunca encolhe */
 }
 
 #back-to-contacts-btn {
