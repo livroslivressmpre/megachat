@@ -988,22 +988,25 @@
                 showPage('contacts-page');
             });
 
-            messageForm.addEventListener('submit', e => {
-                e.preventDefault();
-                const content = messageInput.value.trim();
-                if (content) { sendMessage({ tipo: 'texto', conteudo: content }); messageInput.value = ''; }
-            });
+         messageForm.addEventListener('submit', e => {
+            e.preventDefault();
+            // DEBUG: Confirma que o evento de envio foi acionado.
+            console.log('Evento "submit" do formulário de mensagem disparado.');
 
-            uploadFileBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) sendFileMessage(file); fileInput.value = ''; });
+            const content = messageInput.value.trim();
+            // DEBUG: Mostra o conteúdo da mensagem que está sendo enviada.
+            console.log('Conteúdo da mensagem extraído:', `"${content}"`);
 
-            subchatsList.addEventListener('click', (event) => {
-                const pill = event.target.closest('.subchat-pill');
-                if (pill) {
-                    const subchatId = pill.dataset.id === 'null' ? null : pill.dataset.id;
-                    selectSubchat(subchatId);
-                }
-            });
+            if (content) {
+                // DEBUG: Confirma que a condição para enviar a mensagem foi atendida.
+                console.log('A mensagem tem conteúdo, chamando sendMessage...');
+                sendMessage({ tipo: 'texto', conteudo: content });
+                messageInput.value = '';
+            } else {
+                // DEBUG: Informa por que a mensagem não foi enviada.
+                console.warn('A mensagem está vazia ou contém apenas espaços. Envio cancelado.');
+            }
+        });
 
             subchatsList.addEventListener('dblclick', (event) => {
                 const pill = event.target.closest('.subchat-pill');
@@ -1182,11 +1185,45 @@
             messagesContainer.appendChild(messageWrapper);
         }
 
-        function sendMessage(messageData) {
+     function sendMessage(messageData) {
+            // DEBUG: Verifica se as variáveis de estado estão corretas antes de enviar.
+            console.log('Função sendMessage foi chamada com:', messageData);
+            console.log('currentUser:', currentUser ? currentUser.uid : 'NULO');
+            console.log('currentChatPartner:', currentChatPartner ? currentChatPartner.uid : 'NULO');
+            console.log('currentSubchatId:', currentSubchatId);
+
+            if (!currentUser || !currentChatPartner) {
+                console.error("ERRO: Usuário atual ou parceiro de chat não definido. Não é possível enviar a mensagem.");
+                return;
+            }
+
             const chatId = getChatId(currentUser.uid, currentChatPartner.uid);
             const collectionName = currentSubchatId ? `subchat_${currentSubchatId}` : 'messages';
-            const finalMessage = { ...messageData, user_que_enviou: currentUser.uid, user_que_recebeu: currentChatPartner.uid, hora_enviado: firebase.firestore.FieldValue.serverTimestamp() };
-            db.collection('chats').doc(chatId).collection(collectionName).add(finalMessage);
+            
+            // DEBUG: Mostra os detalhes da operação de banco de dados.
+            console.log(`Tentando adicionar mensagem ao Firestore:
+                - Chat ID: ${chatId}
+                - Collection: ${collectionName}`);
+
+            const finalMessage = { 
+                ...messageData, 
+                user_que_enviou: currentUser.uid, 
+                user_que_recebeu: currentChatPartner.uid, 
+                hora_enviado: firebase.firestore.FieldValue.serverTimestamp() 
+            };
+            
+            // DEBUG: Exibe o objeto final da mensagem que será salvo.
+            console.log('Objeto da mensagem final:', finalMessage);
+
+            db.collection('chats').doc(chatId).collection(collectionName).add(finalMessage)
+                .then(docRef => {
+                    // DEBUG: Confirma que a mensagem foi enviada com sucesso.
+                    console.log('SUCESSO: Mensagem adicionada com o ID:', docRef.id);
+                })
+                .catch(error => {
+                    // DEBUG: Captura e exibe qualquer erro do Firestore.
+                    console.error('ERRO ao enviar a mensagem para o Firestore:', error);
+                });
         }
 
         function sendFileMessage(file) {
